@@ -14,7 +14,7 @@ class cardHandler {
         //await githubApi.createIssue(card);
 
         config.trello.isWorking = false;
-        return true;
+        return card;
     }
 
     async cardUpdated(card) {
@@ -24,10 +24,11 @@ class cardHandler {
         //await githubApi.updateIssue(card);
 
         config.trello.isWorking = false;
+        return card;
     }
 
     async handler(action, card) {
-        if (this.actionsEnum[action]) this.actionsEnum[action](card);
+        if (this.actionsEnum[action]) return this.actionsEnum[action](card);
         else console.warn(`No handler for action: ${action}`);
     }
 }
@@ -44,7 +45,7 @@ const cardsTrigger = async (event) => {
 
     let card = eventToCard(event);
 
-    testingBoard.handler(event.action.type, card);
+    return testingBoard.handler(event.action.type, card);
 };
 
 const eventToCard = (event) => {
