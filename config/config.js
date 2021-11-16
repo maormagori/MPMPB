@@ -22,6 +22,12 @@ let config = {
             },
         },
     },
+    auth: {
+        github: {
+            token: process.env.GITHUB_TOKEN,
+            user: process.env.GITHUB_USER,
+        },
+    },
 };
 
 module.exports = config;
