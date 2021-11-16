@@ -5,6 +5,23 @@ let config = {
     port: process.env.PORT || "5588",
     hostname: process.env.HOSTNAME || "127.0.0.1",
 
+    syncer: {
+        trello: {
+            isWorking: false,
+            latest: {
+                card: "",
+                timestamp: null,
+            },
+        },
+
+        github: {
+            isWorking: false,
+            latest: {
+                issue: "",
+                timestamp: null,
+            },
+        },
+    },
     auth: {
         github: {
             token: process.env.GITHUB_TOKEN,
