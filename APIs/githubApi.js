@@ -37,3 +37,9 @@ const getIssue = async (issue_number, repo) => {
         issue_number: issue_number,
     });
 };
+
+module.exports = {
+    createAnIssueFromTrelloCard,
+    updateAnIssueFromTrelloCard,
+    getIssue,
+};
