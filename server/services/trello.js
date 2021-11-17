@@ -1,30 +1,42 @@
 const config = require("../../config/config").syncer;
 const githubApi = require("../../APIs/githubApi");
+const db = require("../../DB/API");
+
+const workLog = {
+    start: (cardId) => {
+        config.trello.isWorking = true;
+        config.trello.latest.card = cardId;
+        config.trello.latest.timestamp = Date.now();
+    },
+    stop: () => {
+        config.trello.isWorking = false;
+    },
+};
 // ***************
 // TRIGGER ACTIONS
 // ***************
-const cardCreated = async (card, repo) => {
-    config.trello.isWorking = true;
-    config.trello.latest.card = card.id;
-    config.trello.latest.timestamp = Date.now();
-
+const cardCreated = async (card, repo, project) => {
     let githubIssue = await githubApi.createAnIssueFromTrelloCard(card, repo);
 
-    console.log(githubIssue);
-    config.trello.isWorking = false;
-    return card;
+    db.insertNewCardIssuePair(project, card.id, githubIssue.data.number);
+
+    return true;
 };
 
-const cardUpdated = async (card, repo) => {
-    config.trello.isWorking = true;
-    config.trello.latestCardId = card.id;
+const cardUpdated = async (card, repo, project) => {
+    try {
+        const { issue_number } = db.getIssueNumberFromCardId(project, card.id);
+        await githubApi.updateAnIssueFromTrelloCard(card, repo, issue_number);
+        return true;
+    } catch (error) {
+        if (true) {
+            //TODO: check it's the right error.
+            cardCreated(card, repo, project);
+            return true;
+        }
 
-    //TODO: get issue number from local db
-
-    let githubIssue = await githubApi.updateAnIssueFromTrelloCard(card, repo);
-
-    config.trello.isWorking = false;
-    return card;
+        return false;
+    }
 };
 
 const ACTIONS_ENUM = {
@@ -35,12 +47,17 @@ const ACTIONS_ENUM = {
 // END OF TRIGGER ACTIONS
 // ***************
 
-const handler = async (action, card, githubRepo) => {
-    if (ACTIONS_ENUM[action]) return ACTIONS_ENUM[action](card, githubRepo);
-    else console.warn(`No handler for action: ${action}`);
+const handler = async (action) => {
+    if (ACTIONS_ENUM[action]) {
+        let argumentsToPass = arguments;
+        argumentsToPass.shift();
+        return ACTIONS_ENUM[action](...argumentsToPass);
+    } else {
+        console.warn(`No handler for action: ${action}`);
+    }
 };
 
-const cardsTrigger = async (event, githubRepo) => {
+const cardsTrigger = async (event, githubRepo, project) => {
     if (skipCard(event)) {
         console.info(
             `Card ${event.action.data.card.id} with action ${event.action.type} skipped.`
@@ -50,7 +67,9 @@ const cardsTrigger = async (event, githubRepo) => {
 
     let card = eventToCard(event);
 
-    return handler(event.action.type, card, githubRepo);
+    workLog.start(card.id);
+    await handler(event.action.type, card, githubRepo, project);
+    workLog.stop();
 };
 
 const eventToCard = (event) => {
