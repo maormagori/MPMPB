@@ -4,12 +4,20 @@ const db = require("../../DB/API");
 
 const workLog = {
     start: (cardId) => {
+        console.log(
+            `[${new Date().toLocaleTimeString()}] Trello service: Started working on card ${cardId}`
+        );
         config.trello.isWorking = true;
         config.trello.latest.card = cardId;
         config.trello.latest.timestamp = Date.now();
     },
     stop: () => {
         config.trello.isWorking = false;
+        console.log(
+            `[${new Date().toLocaleTimeString()}] Trello service: Stopped working on card ${
+                config.trello.latest.card
+            }`
+        );
     },
 };
 // ***************
@@ -33,9 +41,7 @@ const cardUpdated = async (card, repo, project) => {
             //TODO: check it's the right error.
             cardCreated(card, repo, project);
             return true;
-        }
-
-        return false;
+        } else return false;
     }
 };
 
@@ -68,8 +74,15 @@ const cardsTrigger = async (event, githubRepo, project) => {
     let card = eventToCard(event);
 
     workLog.start(card.id);
-    await handler(event.action.type, card, githubRepo, project);
+    let syncingResult = await handler(
+        event.action.type,
+        card,
+        githubRepo,
+        project
+    );
     workLog.stop();
+
+    return syncingResult;
 };
 
 const eventToCard = (event) => {
